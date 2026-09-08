@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Window Placement Rules
+GenericName=Window placement configurator
+Comment=Configure which workspaces windows open on (cosmic-wmctl)
+Exec=cosmic-wmctl-config
+Icon=preferences-system-windows
+Terminal=false
+Categories=Settings;DesktopSettings;Utility;
+Keywords=workspace;rules;window;placement;cosmic;
