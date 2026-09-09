@@ -388,24 +388,26 @@ impl Application for App {
         .align_y(Alignment::Center)
         .padding([spacing.space_xxs, 0]);
 
-        let content = settings::view_column(vec![
-            self.rules_section(),
-            actions.into(),
-            self.windows_section(),
-            self.status_row(),
-        ])
-        .width(Length::FillPortion(2));
+        // Fixed top: the rules editor (always visible), then a dedicated
+        // scrollable for the window list — with many open windows the two
+        // scroll independently instead of one shared scroll.
+        let top = container(
+            settings::view_column(vec![self.rules_section(), actions.into()]).width(Length::Fill),
+        )
+        .padding([spacing.space_xs, spacing.space_s, 0, spacing.space_s]);
 
-        let body = scrollable(
-            container(content)
-                .align_x(Alignment::Center)
-                .width(Length::Fill)
-                .padding([spacing.space_xs, spacing.space_s, spacing.space_s, spacing.space_s]),
+        let windows = scrollable(
+            container(settings::view_column(vec![
+                self.windows_section(),
+                self.status_row(),
+            ])
+            .width(Length::Fill))
+            .padding([0, spacing.space_s, spacing.space_s, spacing.space_s]),
         )
         .width(Length::Fill)
         .height(Length::Fill);
 
-        Column::with_children([header.into(), body.into()])
+        Column::with_children([header.into(), top.into(), windows.into()])
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
