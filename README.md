@@ -176,6 +176,8 @@ new window to the workspace — equivalent to `launch` without an app-id filter.
 
 ## Graphical configurator (`cosmic-wmctl-config`)
 
+![cosmic-wmctl-config main window](docs/screenshot.png)
+
 A small COSMIC app for editing the rules file and applying rules live. It shows
 the real workspaces and open windows from your session, provides a picker to
 fill in workspace selectors, and can apply a rule to currently open windows
