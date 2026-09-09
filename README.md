@@ -25,7 +25,22 @@ cargo build
 ```
 
 Builds the `cosmic-wmctl` CLI. The `cosmic-wmctl-config` GUI is a separate
-workspace member (`cargo build -p cosmic-wmctl-config`).
+workspace member (`cargo build -p cosmic-wmctl-config`). The repository is
+self-contained: the vendored `cosmic-protocols` toolkit lives under
+`vendor/`.
+
+## Install
+
+```bash
+just install        # binaries, desktop entry and systemd unit to ~/.local
+```
+
+(Override the destination with `prefix=/usr just install`.) Enable the rules
+daemon at login:
+
+```bash
+systemctl --user enable --now cosmic-wmctl
+```
 
 ## Usage
 
@@ -170,9 +185,8 @@ without waiting for the daemon ("Apply now").
 cargo run -p cosmic-wmctl-config
 ```
 
-Both the CLI and the GUI write/read the same `rules.toml`, so edits made in the
-GUI take effect the next time `cosmic-wmctl daemon` starts. (If you want the
-daemon to pick up changes without a restart, restart it after saving.)
+Both the CLI and the GUI write/read the same `rules.toml`, and the daemon
+hot-reloads it — a save in the GUI takes effect immediately, no restart needed.
 
 The GUI lives in its own workspace member and depends on the System76
 `libcosmic` framework (`git = "https://github.com/pop-os/libcosmic"`), which is
@@ -186,3 +200,8 @@ sudo install -m755 target/release/cosmic-wmctl-config /usr/local/bin/
 sudo install -m644 cosmic-wmctl-config/cosmic-wmctl-config.desktop /usr/share/applications/
 ```
 
+
+## License
+
+GPL-3.0-only — see [LICENSE](LICENSE). The vendored `cosmic-protocols`
+(`vendor/`) is System76's work under the same license.

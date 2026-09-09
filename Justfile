@@ -17,6 +17,27 @@ release:
 clean:
     cargo clean
 
+# --- Install ---
+
+prefix := env_var_or_default("PREFIX", env_var("HOME") + "/.local")
+
+## Install binaries, desktop entry and systemd unit to ~/.local (override: prefix=/usr)
+install: release
+    install -Dm755 target/release/cosmic-wmctl {{prefix}}/bin/cosmic-wmctl
+    install -Dm755 target/release/cosmic-wmctl-config {{prefix}}/bin/cosmic-wmctl-config
+    install -Dm644 cosmic-wmctl-config/cosmic-wmctl-config.desktop {{prefix}}/share/applications/cosmic-wmctl-config.desktop
+    install -Dm644 dist/cosmic-wmctl.service {{prefix}}/share/systemd/user/cosmic-wmctl.service
+    update-desktop-database {{prefix}}/share/applications 2>/dev/null || true
+    @echo "Installed. Enable the daemon with:"
+    @echo "  systemctl --user enable --now cosmic-wmctl"
+
+## Uninstall binaries, desktop entry and systemd unit
+uninstall:
+    rm -f {{prefix}}/bin/cosmic-wmctl {{prefix}}/bin/cosmic-wmctl-config
+    rm -f {{prefix}}/share/applications/cosmic-wmctl-config.desktop
+    rm -f {{prefix}}/share/systemd/user/cosmic-wmctl.service
+    update-desktop-database {{prefix}}/share/applications 2>/dev/null || true
+
 # --- Test ---
 
 ## Run all tests
