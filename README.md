@@ -192,13 +192,8 @@ The GUI lives in its own workspace member and depends on the System76
 `libcosmic` framework (`git = "https://github.com/pop-os/libcosmic"`), which is
 not published on crates.io — the first build will clone it and its iced fork.
 
-To install the app launcher entry:
-
-```bash
-cargo build --release -p cosmic-wmctl-config
-sudo install -m755 target/release/cosmic-wmctl-config /usr/local/bin/
-sudo install -m644 cosmic-wmctl-config/cosmic-wmctl-config.desktop /usr/share/applications/
-```
+The app launcher entry, binaries and the daemon systemd unit are all installed
+by `just install` (see [Install](#install)).
 
 
 ## License
