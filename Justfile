@@ -26,6 +26,9 @@ install: release
     install -Dm755 target/release/cosmic-wmctl {{prefix}}/bin/cosmic-wmctl
     install -Dm755 target/release/cosmic-wmctl-config {{prefix}}/bin/cosmic-wmctl-config
     install -Dm644 cosmic-wmctl-config/cosmic-wmctl-config.desktop {{prefix}}/share/applications/cosmic-wmctl-config.desktop
+    # The session PATH may not include ~/.local/bin, so point Exec at the
+    # installed binary directly.
+    sed -i "s|^Exec=.*|Exec={{prefix}}/bin/cosmic-wmctl-config|" {{prefix}}/share/applications/cosmic-wmctl-config.desktop
     install -Dm644 dist/cosmic-wmctl.service {{prefix}}/share/systemd/user/cosmic-wmctl.service
     update-desktop-database {{prefix}}/share/applications 2>/dev/null || true
     @echo "Installed. Enable the daemon with:"
