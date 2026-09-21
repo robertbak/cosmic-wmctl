@@ -3,7 +3,7 @@ use std::{collections::HashSet, fmt};
 use anyhow::{Result, bail};
 use wayland_protocols::ext::workspace::v1::client::ext_workspace_handle_v1;
 
-use crate::wayland::{WorkspaceRecord};
+use crate::wayland::WorkspaceRecord;
 
 pub fn match_window<'a>(
     windows: &'a [crate::wayland::WindowRecord],

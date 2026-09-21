@@ -130,7 +130,10 @@ enum Message {
     ApplyNow,
     Applied(Result<Vec<String>, String>),
     /// Open the "move window to workspace" dialog for a window.
-    MoveWindow { app_id: String, title: String },
+    MoveWindow {
+        app_id: String,
+        title: String,
+    },
     /// Open the workspace-picker dialog for a rule.
     PickWorkspace(usize),
     /// A workspace was picked inside the move dialog.
@@ -203,9 +206,7 @@ impl Application for App {
                 }
                 cosmic::task::none()
             }
-            Message::Refresh => {
-                cosmic::task::future(async { Message::LiveLoaded(fetch_live()) })
-            }
+            Message::Refresh => cosmic::task::future(async { Message::LiveLoaded(fetch_live()) }),
             Message::AppIdChanged(index, value) => {
                 if let Some(rule) = self.rules.get_mut(index) {
                     rule.app_id = value;
@@ -249,10 +250,9 @@ impl Application for App {
             }
             Message::Save => {
                 self.status = Some(match save_rules(&self.config_path, &self.rules) {
-                    Ok(written) => format!(
-                        "wrote {written} rule(s) to {}",
-                        self.config_path.display()
-                    ),
+                    Ok(written) => {
+                        format!("wrote {written} rule(s) to {}", self.config_path.display())
+                    }
                     Err(error) => error,
                 });
                 cosmic::task::none()
@@ -281,8 +281,7 @@ impl Application for App {
             }
             Message::MoveWindow { app_id, title } => {
                 if self.live.is_none() {
-                    self.status =
-                        Some("session data not loaded — press Refresh first".into());
+                    self.status = Some("session data not loaded — press Refresh first".into());
                     return cosmic::task::none();
                 }
                 self.dialog = Some(Dialog::MoveWindow { app_id, title, workspace: None });
@@ -290,8 +289,7 @@ impl Application for App {
             }
             Message::PickWorkspace(rule_index) => {
                 if self.live.is_none() {
-                    self.status =
-                        Some("session data not loaded — press Refresh first".into());
+                    self.status = Some("session data not loaded — press Refresh first".into());
                     return cosmic::task::none();
                 }
                 self.dialog = Some(Dialog::PickWorkspace { rule_index });
@@ -360,8 +358,8 @@ impl Application for App {
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let help_button = button::icon(icon::from_name("help-about-symbolic"))
-            .on_press(Message::ToggleHelp);
+        let help_button =
+            button::icon(icon::from_name("help-about-symbolic")).on_press(Message::ToggleHelp);
         let help = if self.show_help {
             popover::popover(help_button)
                 .position(Position::Bottom)
@@ -371,9 +369,7 @@ impl Application for App {
             popover::popover(help_button)
         };
 
-        let header = header_bar()
-            .title("Window Placement Rules")
-            .end(help);
+        let header = header_bar().title("Window Placement Rules").end(help);
 
         let spacing = cosmic::theme::spacing();
         let actions = Row::with_children([
@@ -397,11 +393,10 @@ impl Application for App {
         .padding([spacing.space_xs, spacing.space_s, 0, spacing.space_s]);
 
         let windows = scrollable(
-            container(settings::view_column(vec![
-                self.windows_section(),
-                self.status_row(),
-            ])
-            .width(Length::Fill))
+            container(
+                settings::view_column(vec![self.windows_section(), self.status_row()])
+                    .width(Length::Fill),
+            )
             .padding([0, spacing.space_s, spacing.space_s, spacing.space_s]),
         )
         .width(Length::Fill)
@@ -414,22 +409,15 @@ impl Application for App {
     }
 
     fn dialog(&self) -> Option<Element<'_, Message>> {
-        let workspaces = || {
-            self.live
-                .as_ref()
-                .map(|live| live.workspaces.clone())
-                .unwrap_or_default()
-        };
+        let workspaces =
+            || self.live.as_ref().map(|live| live.workspaces.clone()).unwrap_or_default();
         match self.dialog.as_ref()? {
             Dialog::MoveWindow { app_id, title, workspace } => {
                 let picked = workspace
                     .and_then(|index| self.live.as_ref()?.workspaces.get(index))
                     .and_then(workspace_selector);
-                let label = if title.is_empty() {
-                    app_id.clone()
-                } else {
-                    format!("{title} ({app_id})")
-                };
+                let label =
+                    if title.is_empty() { app_id.clone() } else { format!("{title} ({app_id})") };
                 let body = match &picked {
                     Some(workspace) => format!("{label}\nWill move to workspace {workspace}"),
                     None => format!("{label}\nChoose a workspace:"),
@@ -453,12 +441,8 @@ impl Application for App {
                         .title("Move window to workspace")
                         .body(body)
                         .control(container(picker).width(Length::Fill))
-                        .primary_action(
-                            button::standard("Move & add rule").on_press_maybe(confirm),
-                        )
-                        .secondary_action(
-                            button::standard("Cancel").on_press(Message::CloseDialog),
-                        )
+                        .primary_action(button::standard("Move & add rule").on_press_maybe(confirm))
+                        .secondary_action(button::standard("Cancel").on_press(Message::CloseDialog))
                         .into(),
                 )
             }
@@ -537,9 +521,9 @@ impl App {
     fn rules_section(&self) -> Element<'_, Message> {
         let mut section: settings::Section<'_, Message> = settings::section().title("Rules");
         if self.rules.is_empty() {
-            section = section.add(
-                cosmic::widget::text::body("No rules yet — add one above, or click Move on a window."),
-            );
+            section = section.add(cosmic::widget::text::body(
+                "No rules yet — add one above, or click Move on a window.",
+            ));
         } else {
             for (index, rule) in self.rules.iter().enumerate() {
                 section = section.add(self.rule_row(index, rule));
@@ -568,16 +552,11 @@ impl App {
         let pick = button::standard(workspace).on_press(Message::PickWorkspace(index));
         let remove = button::standard("Remove").on_press(Message::RemoveRule(index));
 
-        Row::with_children([
-            app_id.into(),
-            title.into(),
-            pick.into(),
-            remove.into(),
-        ])
-        .spacing(8)
-        .align_y(Alignment::Center)
-        .width(Length::Fill)
-        .into()
+        Row::with_children([app_id.into(), title.into(), pick.into(), remove.into()])
+            .spacing(8)
+            .align_y(Alignment::Center)
+            .width(Length::Fill)
+            .into()
     }
 
     /// Open windows: one label/control row per window, Move on the right.
@@ -634,10 +613,7 @@ fn fetch_live() -> Result<LiveData, String> {
     let windows = snapshot
         .windows
         .iter()
-        .map(|window| WindowInfo {
-            app_id: window.app_id.clone(),
-            title: window.title.clone(),
-        })
+        .map(|window| WindowInfo { app_id: window.app_id.clone(), title: window.title.clone() })
         .collect::<Vec<_>>();
 
     Ok(LiveData { workspaces, windows })

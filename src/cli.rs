@@ -2,9 +2,52 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand};
+use serde::Serialize;
 
 use crate::rules;
-use crate::wayland::{LaunchConfig, MoveRequest, Query, Session};
+use crate::wayland::{LaunchConfig, MoveRequest, Query, Session, WindowRecord, WorkspaceRecord};
+
+/// JSON representation of a window (for the `--json` output of `windows`).
+#[derive(Debug, Clone, Serialize)]
+pub struct WindowJson {
+    pub title: String,
+    pub app_id: String,
+    pub identifier: String,
+    pub workspaces: Vec<String>,
+    pub outputs: Vec<String>,
+}
+
+impl WindowJson {
+    fn from_record(window: &WindowRecord) -> Self {
+        Self {
+            title: window.title.clone(),
+            app_id: window.app_id.clone(),
+            identifier: window.identifier.clone(),
+            workspaces: window.workspace_names.clone(),
+            outputs: window.output_names.clone(),
+        }
+    }
+}
+
+/// JSON representation of a workspace (for the `--json` output of `workspaces`).
+#[derive(Debug, Clone, Serialize)]
+pub struct WorkspaceJson {
+    pub name: String,
+    pub id: Option<String>,
+    pub coords: String,
+    pub outputs: Vec<String>,
+}
+
+impl WorkspaceJson {
+    fn from_record(workspace: &WorkspaceRecord) -> Self {
+        Self {
+            name: workspace.name.clone(),
+            id: workspace.id.clone(),
+            coords: workspace.coordinates_string(),
+            outputs: workspace.output_names.clone(),
+        }
+    }
+}
 
 #[derive(Debug, Parser)]
 #[command(author, version, about)]
@@ -16,38 +59,38 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 enum Command {
     /// List all windows.
-    Windows,
+    Windows(WindowsArgs),
     /// List all workspaces.
-    Workspaces,
+    Workspaces(WorkspacesArgs),
     /// Print runtime Wayland globals and COSMIC toplevel capabilities.
     DebugCapabilities,
     /// Move a window to a workspace.
     ///
-    /// Usage: cosmicctl window move <window-query> <workspace-query>
+    /// Usage: cosmic-wmctl window-move <window-query> <workspace-query>
     ///
     /// Window query: field=value pairs combined with ' and '
-    ///   Fields: app_id, title, identifier (default: app_id)
+    ///   Fields: app_id, title, identifier, active=true|false (default field: app_id)
     ///   Matching: case-insensitive substring by default
     ///   Use --exact for exact match instead of substring
     ///
-    /// Workspace query: id, name, or coordinates (e.g. 1,0)
+    /// Workspace query: bare id, name, or coordinates (e.g. 1,0)
     ///
     /// Examples:
-    ///   cosmicctl window move 'app_id=firefox' 'name=6'
-    ///   cosmicctl window move 'title=Main and active=true' '1,0'
+    ///   cosmic-wmctl window-move 'app_id=firefox' '6'
+    ///   cosmic-wmctl window-move 'title=Main and active=true' '1,0'
     WindowMove(WindowMoveArgs),
     /// Activate (focus) a window.
     ///
-    /// Usage: cosmicctl window activate <window-query>
+    /// Usage: cosmic-wmctl window-activate <window-query>
     WindowActivate(WindowActivateArgs),
     /// Activate (focus) a workspace.
     ///
-    /// Usage: cosmicctl workspace activate <workspace-query>
+    /// Usage: cosmic-wmctl workspace-activate <workspace-query>
     WorkspaceActivate(WorkspaceActivateArgs),
     /// Launch a command and move its window to a workspace.
     ///
-    /// Usage: cosmicctl launch [--workspace <query>] [--app-id <glob>] [--title <glob>]
-    ///                         [--timeout <secs>] [--dry-run] -- <command...>
+    /// Usage: cosmic-wmctl launch [--workspace <query>] [--app-id <glob>] [--title <glob>]
+    ///                            [--timeout <secs>] [--return] [--dry-run] -- <command...>
     ///
     /// The command is started, then cosmic-wmctl waits for a matching window to
     /// appear (up to --timeout) and moves it. With no --app-id/--title filter,
@@ -62,13 +105,27 @@ enum Command {
     Daemon(DaemonArgs),
     /// Run a command, optionally on a specific workspace.
     ///
-    /// Usage: cosmicctl run [--workspace <query>] [--return] -- <command...>
+    /// Usage: cosmic-wmctl run [--workspace <query>] [--return] -- <command...>
     ///
     /// If --workspace is given, the command is started and its window is moved
     /// to that workspace once it appears.
     /// If --return is given, the command is started and the process waits
     /// for it to exit before the tool returns.
     Run(RunArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct WindowsArgs {
+    /// Emit a JSON array instead of the human-readable table.
+    #[arg(long)]
+    json: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct WorkspacesArgs {
+    /// Emit a JSON array instead of the human-readable table.
+    #[arg(long)]
+    json: bool,
 }
 
 #[derive(Debug, Args)]
@@ -164,31 +221,42 @@ pub struct RunArgs {
 impl Cli {
     pub fn run(self) -> Result<()> {
         match self.command {
-            Command::Windows => {
+            Command::Windows(args) => {
                 let mut session = Session::connect()?;
                 let windows = session.snapshot()?.windows;
-                for w in &windows {
-                    println!(
-                        "{} | app_id={} | identifier={} | workspaces={} | outputs={}",
-                        display_field(&w.title),
-                        display_field(&w.app_id),
-                        display_field(&w.identifier),
-                        joined_or_dash(&w.workspace_names),
-                        joined_or_dash(&w.output_names),
-                    );
+                if args.json {
+                    let records = windows.iter().map(WindowJson::from_record).collect::<Vec<_>>();
+                    println!("{}", serde_json::to_string_pretty(&records)?);
+                } else {
+                    for w in &windows {
+                        println!(
+                            "{} | app_id={} | identifier={} | workspaces={} | outputs={}",
+                            display_field(&w.title),
+                            display_field(&w.app_id),
+                            display_field(&w.identifier),
+                            joined_or_dash(&w.workspace_names),
+                            joined_or_dash(&w.output_names),
+                        );
+                    }
                 }
             }
-            Command::Workspaces => {
+            Command::Workspaces(args) => {
                 let mut session = Session::connect()?;
                 let workspaces = session.snapshot()?.workspaces;
-                for w in &workspaces {
-                    println!(
-                        "{} | id={} | coords={} | outputs={}",
-                        w.name,
-                        w.id.as_deref().unwrap_or("-"),
-                        w.coordinates_string(),
-                        w.outputs_csv(),
-                    );
+                if args.json {
+                    let records =
+                        workspaces.iter().map(WorkspaceJson::from_record).collect::<Vec<_>>();
+                    println!("{}", serde_json::to_string_pretty(&records)?);
+                } else {
+                    for w in &workspaces {
+                        println!(
+                            "{} | id={} | coords={} | outputs={}",
+                            w.name,
+                            w.id.as_deref().unwrap_or("-"),
+                            w.coordinates_string(),
+                            w.outputs_csv(),
+                        );
+                    }
                 }
             }
             Command::DebugCapabilities => {
@@ -270,13 +338,11 @@ impl Cli {
                 let config_path = args.config.unwrap_or_else(rules::default_config_path);
                 if args.init {
                     if let Some(parent) = config_path.parent() {
-                        std::fs::create_dir_all(parent).with_context(|| {
-                            format!("failed to create {}", parent.display())
-                        })?;
+                        std::fs::create_dir_all(parent)
+                            .with_context(|| format!("failed to create {}", parent.display()))?;
                     }
-                    std::fs::write(&config_path, rules::EXAMPLE_CONFIG).with_context(|| {
-                        format!("failed to write {}", config_path.display())
-                    })?;
+                    std::fs::write(&config_path, rules::EXAMPLE_CONFIG)
+                        .with_context(|| format!("failed to write {}", config_path.display()))?;
                     println!(
                         "wrote example rules to {}; edit it and run `cosmic-wmctl daemon`",
                         config_path.display()
@@ -299,7 +365,8 @@ impl Cli {
             }
             Command::Run(args) => {
                 let mut session = Session::connect()?;
-                let result = session.run(args.workspace.as_deref(), &args.command, args.r#return)?;
+                let result =
+                    session.run(args.workspace.as_deref(), &args.command, args.r#return)?;
                 println!("Ran '{}'", result.command);
                 if let Some(pid) = result.pid {
                     println!("pid={pid}");
@@ -333,4 +400,48 @@ fn display_field(value: &str) -> &str {
 
 fn joined_or_dash(values: &[String]) -> String {
     if values.is_empty() { "-".to_owned() } else { values.join(", ") }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{WindowJson, WorkspaceJson};
+    use crate::wayland::WindowRecord;
+
+    #[test]
+    fn window_json_shape() {
+        let record = WindowRecord {
+            title: "Terminal".to_owned(),
+            app_id: "org.gnome.Terminal".to_owned(),
+            identifier: "term".to_owned(),
+            output_names: vec!["eDP-1".to_owned()],
+            output_handles: vec![],
+            workspace_names: vec!["2".to_owned(), "1".to_owned()],
+            cosmic_toplevel: None,
+            foreign_id: 42,
+        };
+        let view = WindowJson::from_record(&record);
+        let value = serde_json::to_value(&view).expect("serializable");
+        assert_eq!(value["title"], "Terminal");
+        assert_eq!(value["app_id"], "org.gnome.Terminal");
+        assert_eq!(value["identifier"], "term");
+        assert_eq!(value["workspaces"], serde_json::json!(["2", "1"]));
+        assert_eq!(value["outputs"], serde_json::json!(["eDP-1"]));
+    }
+
+    #[test]
+    fn workspace_json_shape() {
+        // The view struct is plain data; the Wayland proxy handle in the record
+        // cannot be constructed outside a session, so we test the view directly.
+        let view = WorkspaceJson {
+            name: "work".to_owned(),
+            id: None,
+            coords: "1,0".to_owned(),
+            outputs: vec!["eDP-1".to_owned()],
+        };
+        let value = serde_json::to_value(&view).expect("serializable");
+        assert_eq!(value["name"], "work");
+        assert_eq!(value["id"], serde_json::Value::Null);
+        assert_eq!(value["coords"], "1,0");
+        assert_eq!(value["outputs"], serde_json::json!(["eDP-1"]));
+    }
 }

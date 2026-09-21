@@ -1175,13 +1175,14 @@ dependencies = [
 
 [[package]]
 name = "cosmic-wmctl"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "clap",
  "cosmic-client-toolkit 0.2.0",
  "globset",
  "serde",
+ "serde_json",
  "smithay-client-toolkit 0.21.1",
  "toml 1.1.5+spec-1.1.0",
  "wayland-client",
@@ -1190,7 +1191,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-wmctl-config"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cosmic-wmctl",
  "libcosmic",

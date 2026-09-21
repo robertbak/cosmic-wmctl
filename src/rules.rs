@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 /// A rule: move windows whose `app_id` matches `app_id` (and, when given,
 /// whose `title` matches `title`) to the workspace selected by `workspace`.
 ///
-/// The workspace selector uses the same syntax as `move-window`: a workspace
+/// The workspace selector uses the same syntax as `window-move`: a workspace
 /// name, id, or coordinates like `1,0`.
 #[derive(Debug, Clone)]
 pub struct Rule {
@@ -42,8 +42,8 @@ impl Rule {
 }
 
 fn compile_glob(pattern: &str, what: &str) -> Result<GlobMatcher> {
-    let glob = Glob::new(pattern)
-        .with_context(|| format!("invalid {what} glob pattern '{pattern}'"))?;
+    let glob =
+        Glob::new(pattern).with_context(|| format!("invalid {what} glob pattern '{pattern}'"))?;
     Ok(glob.compile_matcher())
 }
 
@@ -67,18 +67,15 @@ pub fn default_config_path() -> PathBuf {
     let config_home = std::env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".config")));
-    config_home
-        .unwrap_or_else(|| PathBuf::from(".config"))
-        .join("cosmic-wmctl")
-        .join("rules.toml")
+    config_home.unwrap_or_else(|| PathBuf::from(".config")).join("cosmic-wmctl").join("rules.toml")
 }
 
 /// Load rules from a TOML file at `path`.
 pub fn load_rules(path: &Path) -> Result<Vec<Rule>> {
     let contents = std::fs::read_to_string(path)
         .with_context(|| format!("failed to read rules file {}", path.display()))?;
-    let file: RulesFile =
-        toml::from_str(&contents).with_context(|| format!("invalid rules file {}", path.display()))?;
+    let file: RulesFile = toml::from_str(&contents)
+        .with_context(|| format!("invalid rules file {}", path.display()))?;
 
     let mut rules = Vec::with_capacity(file.rules.len());
     for (index, rule) in file.rules.into_iter().enumerate() {
@@ -149,15 +146,12 @@ mod tests {
 
     #[test]
     fn load_rules_from_toml() {
-        let dir = std::env::temp_dir()
-            .join(format!("cosmic-wmctl-test-{}-load", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("cosmic-wmctl-test-{}-load", std::process::id()));
         std::fs::create_dir_all(&dir).expect("create temp dir");
         let path = dir.join("rules.toml");
-        std::fs::write(
-            &path,
-            "[[rules]]\napp_id = \"org.mozilla.firefox\"\nworkspace = \"2\"\n",
-        )
-        .expect("write rules file");
+        std::fs::write(&path, "[[rules]]\napp_id = \"org.mozilla.firefox\"\nworkspace = \"2\"\n")
+            .expect("write rules file");
 
         let rules = load_rules(&path).expect("load rules");
         assert_eq!(rules.len(), 1);
@@ -169,8 +163,8 @@ mod tests {
 
     #[test]
     fn empty_rules_file_is_valid() {
-        let dir = std::env::temp_dir()
-            .join(format!("cosmic-wmctl-test-{}-empty", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("cosmic-wmctl-test-{}-empty", std::process::id()));
         std::fs::create_dir_all(&dir).expect("create temp dir");
         let path = dir.join("rules.toml");
         std::fs::write(&path, "# no rules yet\n").expect("write rules file");
@@ -196,8 +190,8 @@ mod tests {
     #[test]
     fn example_config_parses() {
         // Written to disk so load_rules can read it, matching how `daemon --init` uses it.
-        let dir = std::env::temp_dir()
-            .join(format!("cosmic-wmctl-test-{}-example", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("cosmic-wmctl-test-{}-example", std::process::id()));
         std::fs::create_dir_all(&dir).expect("create temp dir");
         let path = dir.join("rules.toml");
         std::fs::write(&path, EXAMPLE_CONFIG).expect("write example config");

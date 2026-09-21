@@ -7,16 +7,20 @@ Small CLI for inspecting COSMIC windows/workspaces, moving a window to a workspa
 - List current workspaces with names, ids, coordinates, and outputs.
 - List current windows with title, app id, identifier, current workspace, and outputs.
 - Move a window to a target workspace with either exact or fuzzy matching.
+- Activate (focus) a window or a workspace.
 - **`launch`**: start a command and move its window to a workspace as soon as it opens.
+- **`run`**: start a command on a specific workspace.
 - **`daemon`**: watch for new windows and move them per rules in a config file — anything you start, wherever you start it from.
+- **`debug-capabilities`**: print the runtime Wayland globals and COSMIC toplevel capabilities, to diagnose missing features.
+- `--json` output on `windows`/`workspaces` for scripting.
 
 ## Requirements
 
 - A running COSMIC session on Wayland.
 - `ext_workspace_manager_v1` plus `zcosmic_workspace_manager_v2` for workspace discovery.
-- `zcosmic_toplevel_manager_v1` with the `move_to_ext_workspace` capability for `move-window`.
+- `zcosmic_toplevel_manager_v1` with the `move_to_ext_workspace` capability for `window-move`.
 
-If your COSMIC build exposes workspaces but does not advertise `move_to_ext_workspace`, the CLI can still inspect windows and workspaces, but `move-window` will fail with a clear runtime error.
+If your COSMIC build exposes workspaces but does not advertise `move_to_ext_workspace`, the CLI can still inspect windows and workspaces, but `window-move` will fail with a clear runtime error.
 
 ## Build
 
@@ -45,19 +49,36 @@ systemctl --user enable --now cosmic-wmctl
 ## Usage
 
 ```bash
-cargo run -- list-workspaces
-cargo run -- list-windows
-cargo run -- move-window --app-id org.mozilla.firefox --workspace 2
-cargo run -- move-window --title "Mozilla Firefox" --workspace 2 --dry-run
-cargo run -- launch --workspace 2 --app-id '*firefox*' -- firefox
-cargo run -- move-window --app-id firefox --workspace 2 --force-ext-move
+cosmic-wmctl workspaces
+cosmic-wmctl windows
+cosmic-wmctl window-move 'app_id=firefox' '6'
+cosmic-wmctl window-move 'title=Mozilla Firefox' '2' --dry-run
+cosmic-wmctl window-activate 'app_id=org.gnome.Terminal'
+cosmic-wmctl workspace-activate '6'
+cosmic-wmctl launch --workspace 2 --app-id '*firefox*' -- firefox
+cosmic-wmctl run --workspace 2 -- gimp
 ```
 
-`move-window` also supports `--force-ext-move` to bypass capability checks entirely
+`windows` and `workspaces` accept `--json` for machine-readable output:
+
+```bash
+cosmic-wmctl windows --json
+```
+
+`window-move` also supports `--force-ext-move` to bypass capability checks entirely
 (useful against `cosmic-comp` builds that only advertise the stale `MoveToWorkspace`
 toplevel capability).
 
-By default `move-window` performs case-insensitive substring matching for the selected window field. Add `--exact` to require an exact match.
+**Window queries** are `field=value` predicates joined with ` and `. Fields:
+`app_id`, `title`, `identifier`, and `active=true|false`. A bare token matches
+`app_id`. Matching is a case-insensitive substring by default; add `--exact`
+to require an exact match.
+
+**Workspace queries** are a bare id, name, or coordinates (e.g. `1,0`) — no
+`field=value` form.
+
+Diagnose your session with `cosmic-wmctl debug-capabilities`, which prints the
+Wayland globals and COSMIC toplevel capabilities actually in effect.
 
 ## Automatic placement
 

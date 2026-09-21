@@ -166,11 +166,8 @@ impl Query {
         }
 
         // Split on ' and ' to get individual predicates
-        let predicates: Vec<&str> = raw
-            .split(" and ")
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty())
-            .collect();
+        let predicates: Vec<&str> =
+            raw.split(" and ").map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
 
         let mut selectors = Vec::new();
         for pred in predicates {
@@ -212,7 +209,10 @@ impl Query {
                     }
                     bail!("'active' value must be 'true' or 'false', got '{}'", value);
                 }
-                _ => bail!("unknown field '{}': use app_id, title, identifier, or active", field_name),
+                _ => bail!(
+                    "unknown field '{}': use app_id, title, identifier, or active",
+                    field_name
+                ),
             };
             Ok(WindowSelector { field, value, exact: false })
         } else {
@@ -233,11 +233,7 @@ impl Query {
 
 impl std::fmt::Display for Query {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let parts: Vec<String> = self
-            .selectors
-            .iter()
-            .map(|s| format!("{}", s))
-            .collect();
+        let parts: Vec<String> = self.selectors.iter().map(|s| format!("{}", s)).collect();
         write!(f, "{}", parts.join(" and "))
     }
 }
@@ -340,7 +336,11 @@ pub struct LaunchResult {
 }
 
 fn spawn_shell(command: &str) -> Result<std::process::Child> {
-    std::process::Command::new("sh").arg("-c").arg(command).spawn().context("failed to spawn command")
+    std::process::Command::new("sh")
+        .arg("-c")
+        .arg(command)
+        .spawn()
+        .context("failed to spawn command")
 }
 
 pub struct Session {
@@ -525,8 +525,7 @@ impl Session {
                 Ok(_) => {}
                 Err(WaylandError::Io(error)) if error.kind() == std::io::ErrorKind::WouldBlock => {}
                 Err(error) => {
-                    return Err(anyhow::Error::new(error))
-                        .context("failed to read Wayland events");
+                    return Err(anyhow::Error::new(error)).context("failed to read Wayland events");
                 }
             }
         }
@@ -535,7 +534,6 @@ impl Session {
             .context("failed to dispatch Wayland events")?;
         Ok(())
     }
-
 
     pub fn debug_info(&mut self) -> DebugInfo {
         DebugInfo {
@@ -571,7 +569,7 @@ impl Session {
 
         if advertises_legacy_only {
             bail!(
-                "this COSMIC session exposes ext workspaces (ext_workspace_manager_v1 + zcosmic_workspace_manager_v2) but does not advertise move_to_ext_workspace; move-window is unavailable on this compositor build"
+                "this COSMIC session exposes ext workspaces (ext_workspace_manager_v1 + zcosmic_workspace_manager_v2) but does not advertise move_to_ext_workspace; window-move is unavailable on this compositor build"
             );
         }
 
@@ -619,20 +617,12 @@ impl Session {
         let snapshot = self.snapshot()?;
         let window = match_window(&snapshot.windows, &query)?;
 
-        if let (Some(seat), Some(cosmic_toplevel)) =
-            (self.first_seat(), &window.cosmic_toplevel)
-        {
-            self.app
-                .toplevel_manager_state
-                .manager
-                .activate(cosmic_toplevel, &seat);
+        if let (Some(seat), Some(cosmic_toplevel)) = (self.first_seat(), &window.cosmic_toplevel) {
+            self.app.toplevel_manager_state.manager.activate(cosmic_toplevel, &seat);
             self.conn.flush()?;
         }
 
-        Ok(ActivateWindowResult {
-            title: window.title.clone(),
-            app_id: window.app_id.clone(),
-        })
+        Ok(ActivateWindowResult { title: window.title.clone(), app_id: window.app_id.clone() })
     }
 
     /// Activate (focus) a workspace by selector.
@@ -646,9 +636,7 @@ impl Session {
             .workspace_state
             .workspace_info(&workspace.handle)
             .ok_or_else(|| anyhow::anyhow!("workspace {} not found", selector))?;
-        workspace
-            .handle
-            .activate();
+        workspace.handle.activate();
         self.conn.flush()?;
 
         Ok(())
@@ -717,9 +705,9 @@ impl Session {
                 if let Some(window) = snapshot.windows.iter().find(|window| {
                     !pre.contains(&window.foreign_id)
                         && !window.app_id.is_empty()
-                        && rule.as_ref().is_none_or(|rule| {
-                            rule.matches(&window.app_id, &window.title)
-                        })
+                        && rule
+                            .as_ref()
+                            .is_none_or(|rule| rule.matches(&window.app_id, &window.title))
                 }) {
                     break window.clone();
                 }
@@ -746,12 +734,7 @@ impl Session {
             false
         };
 
-        Ok(LaunchResult {
-            command: cmd_str,
-            pid: Some(pid),
-            exited,
-            move_result,
-        })
+        Ok(LaunchResult { command: cmd_str, pid: Some(pid), exited, move_result })
     }
 
     /// Watch for new windows forever, moving those that match any of `rules` to
@@ -826,9 +809,8 @@ impl Session {
         let mut moved = Vec::new();
         let mut handled = HashSet::new();
         for window in &snapshot.windows {
-            if let Some(rule) = rules
-                .iter()
-                .find(|rule| rule.matches(&window.app_id, &window.title))
+            if let Some(rule) =
+                rules.iter().find(|rule| rule.matches(&window.app_id, &window.title))
             {
                 let key = (window.foreign_id, rule.workspace.as_str());
                 if !handled.insert(key) {
@@ -856,9 +838,8 @@ impl Session {
             if !self.pending.contains_key(&id) {
                 continue;
             }
-            if let Some(rule) = rules
-                .iter()
-                .find(|rule| rule.matches(&window.app_id, &window.title))
+            if let Some(rule) =
+                rules.iter().find(|rule| rule.matches(&window.app_id, &window.title))
             {
                 let key = (id, rule.workspace.clone());
                 if self.moved.contains(&key) {
@@ -1029,13 +1010,7 @@ impl SeatHandler for AppState {
         &mut self.seats
     }
 
-    fn new_seat(
-        &mut self,
-        _conn: &Connection,
-        _qh: &QueueHandle<Self>,
-        _seat: wl_seat::WlSeat,
-    ) {
-    }
+    fn new_seat(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _seat: wl_seat::WlSeat) {}
 
     fn new_capability(
         &mut self,
@@ -1055,12 +1030,7 @@ impl SeatHandler for AppState {
     ) {
     }
 
-    fn remove_seat(
-        &mut self,
-        _conn: &Connection,
-        _qh: &QueueHandle<Self>,
-        _seat: wl_seat::WlSeat,
-    ) {
+    fn remove_seat(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _seat: wl_seat::WlSeat) {
     }
 }
 

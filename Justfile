@@ -73,11 +73,11 @@ run-sub cmd:
 
 ## Run windows command with JSON output
 run-windows-json:
-    COSMIC_WMCTL_OUTPUT=json cargo run -- windows
+    cargo run -- windows --json
 
 ## Run workspaces command with JSON output
 run-workspaces-json:
-    COSMIC_WMCTL_OUTPUT=json cargo run -- workspaces
+    cargo run -- workspaces --json
 
 # --- Config GUI ---
 
