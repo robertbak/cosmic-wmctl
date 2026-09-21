@@ -9,5 +9,5 @@ publish = false
 
 [dependencies]
 cosmic-wmctl = { path = ".." }
-libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = ["winit", "tokio", "a11y", "wayland", "x11"] }
+libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = ["winit", "tokio", "a11y", "wayland"] }
 toml = "1"
