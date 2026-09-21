@@ -9,9 +9,14 @@ publish = false
 
 [workspace]
 members = [
+    "cosmic-wmctl-config",
+]
+# Vendored third-party code is a path dependency, not a workspace member:
+# keeping it out of `members` means `cargo clippy --workspace` does not lint
+# it, so lint churn from newer toolchains cannot break our CI.
+exclude = [
     "vendor/cosmic-protocols",
     "vendor/cosmic-protocols/client-toolkit",
-    "cosmic-wmctl-config",
 ]
 
 [dependencies]
