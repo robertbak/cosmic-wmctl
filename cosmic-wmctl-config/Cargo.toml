@@ -3,7 +3,7 @@ name = "cosmic-wmctl-config"
 version = "0.2.0"
 edition = "2024"
 rust-version = "1.93"
-license = "GPL-3.0-only"
+license = "MIT"
 description = "COSMIC GUI for configuring cosmic-wmctl window placement rules"
 publish = false
 

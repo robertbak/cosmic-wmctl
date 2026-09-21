@@ -221,5 +221,8 @@ by `just install` (see [Install](#install)).
 
 ## License
 
-GPL-3.0-only — see [LICENSE](LICENSE). The vendored `cosmic-protocols`
-(`vendor/`) is System76's work under the same license.
+MIT — see [LICENSE](LICENSE). The vendored `cosmic-protocols`
+(`vendor/`) is System76's work, also MIT (upstream relicensed from
+GPL-3.0-only to MIT in August 2026); our snapshot additionally includes a
+local patch that promotes toplevels to the window list without waiting for
+the compositor's `state` event.

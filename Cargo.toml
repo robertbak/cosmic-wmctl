@@ -3,7 +3,7 @@ name = "cosmic-wmctl"
 version = "0.2.0"
 edition = "2024"
 rust-version = "1.86"
-license = "GPL-3.0-only"
+license = "MIT"
 description = "Small CLI for managing COSMIC windows and workspaces"
 publish = false
 
